@@ -200,9 +200,9 @@ async def process_job(job_id: int, worker_id: int):
                 job_id=job_id,
                 status=PRStatus.COMPLETED,
                 review=cache_hit.review,
-                prompt_tokens=cache_hit.prompt_tokens,
-                completion_tokens=cache_hit.completion_tokens,
-                cost_usd=cache_hit.cost_usd,
+                prompt_tokens=0,
+                completion_tokens=0,
+                cost_usd=0.0,
                 completed_at=completed_at,
                 latency_ms=latency_ms,
                 cache_hit=True

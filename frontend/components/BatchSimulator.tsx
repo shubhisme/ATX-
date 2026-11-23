@@ -30,8 +30,8 @@ export default function BatchSimulator() {
     setSending(true);
     setStatus(null);
 
-    const reuseSha = randomSha();
-    const reuseSample = pick(CLEAN_SAMPLES);
+    const reuseSha = "a3f9c2e81b7d4c05a1e2f3b4c5d6e7f801234567";
+    const reuseSample = CLEAN_SAMPLES.find((s) => s.id === "sql-injection") || CLEAN_SAMPLES[0];
 
     const payloads: SubmitPayload[] = Array.from({ length: batchSize }, (_, i) => {
       let sample: Sample;
@@ -109,12 +109,12 @@ export default function BatchSimulator() {
             +1 Secret Leak ($0)
           </button>
           <button
-            onClick={() => fireBatch(2, true, false)}
+            onClick={() => fireBatch(1, true, false)}
             disabled={sending}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition-all disabled:opacity-50"
           >
             <Layers className="h-3.5 w-3.5 text-amber-400" />
-            Cache Hit Test
+            Cache Hit Test ($0)
           </button>
           <button
             onClick={() => fireBatch(20, false, false)}
