@@ -9,7 +9,9 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+import hmac
+import hashlib
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -18,7 +20,7 @@ from models import PRSubmitRequest, PRJobInsert, PRJobRow, PRStatus, WorkerStatu
 from gates import run_gate
 from context import gather_context
 from agent import review_pr
-from config import NUM_WORKERS, TOKEN_BUDGET
+from config import NUM_WORKERS, TOKEN_BUDGET, GITHUB_WEBHOOK_SECRET
 
 
 # ============================================================================
@@ -145,6 +147,9 @@ async def process_job(job_id: int, worker_id: int):
     # Fetch job
     job = await db.get_job(job_id)
     if not job:
+        return
+    if job.status == PRStatus.SUPERSEDED:
+        print(f"[Worker {worker_id}] Skipping job {job_id} (SUPERSEDED by newer commit)")
         return
     
     print(f"[Worker {worker_id}] Processing job {job_id} (PR #{job.pr_number})")
@@ -355,6 +360,51 @@ async def submit_pr(request: PRSubmitRequest):
         status="QUEUED",
         message=f"PR submitted successfully. Job ID: {job_id}"
     )
+
+
+@app.post("/webhook")
+async def github_webhook(request: Request):
+    """
+    GitHub Webhook receiver. Validates HMAC signature if secret configured,
+    extracts PR details from pull_request event, and enqueues verification.
+    """
+    body_bytes = await request.body()
+    
+    # Verify HMAC SHA256 signature if secret is configured
+    if GITHUB_WEBHOOK_SECRET:
+        signature = request.headers.get("X-Hub-Signature-256", "")
+        expected = "sha256=" + hmac.new(
+            GITHUB_WEBHOOK_SECRET.encode(), body_bytes, hashlib.sha256
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+            
+    event = request.headers.get("X-GitHub-Event", "ping")
+    if event == "ping":
+        return {"status": "ok", "message": "pong"}
+        
+    if event != "pull_request":
+        return {"status": "ignored", "message": f"Ignoring event '{event}'"}
+        
+    payload = await request.json()
+    action = payload.get("action")
+    if action not in ("opened", "synchronize", "reopened"):
+        return {"status": "ignored", "message": f"Ignoring PR action '{action}'"}
+        
+    pr_data = payload.get("pull_request", {})
+    pr_number = pr_data.get("number", 0)
+    title = pr_data.get("title", f"PR #{pr_number}")
+    commit_sha = pr_data.get("head", {}).get("sha", "0" * 40)
+    diff = payload.get("diff") or ""
+    
+    req = PRSubmitRequest(
+        pr_number=pr_number,
+        title=title,
+        commit_sha=commit_sha,
+        diff=diff,
+        files=["sample_repo/utils.py"]
+    )
+    return await submit_pr(req)
 
 
 @app.get("/jobs")
