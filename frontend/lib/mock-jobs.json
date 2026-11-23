@@ -1,0 +1,140 @@
+{
+  "jobs": [
+    {
+      "job_id": "job-001",
+      "pr_number": "101",
+      "repo_url": "sample_repo",
+      "commit_sha": "a3f9c2e81b7d4c05a1e2f3b4c5d6e7f801234567",
+      "status": "COMPLETED",
+      "cache_hit": false,
+      "created_at": 1763870000.0,
+      "started_at": 1763870001.2,
+      "completed_at": 1763870004.1,
+      "latency_ms": 2900,
+      "tokens_in": 2100,
+      "tokens_out": 380,
+      "cost_usd": 0.0006,
+      "diff_content": "--- a/auth.py\n+++ b/auth.py\n@@ -10,4 +10,4 @@\n def login(user, password):\n-    if password == \"admin123\":\n+    if check_hash(password, user.hash):\n         return True",
+      "gate_results": [
+        { "check_type": "secrets", "status": "PASS", "details": "", "duration_ms": 4 },
+        { "check_type": "syntax", "status": "PASS", "details": "", "duration_ms": 9 }
+      ],
+      "findings": [
+        {
+          "finding_id": "f-001",
+          "file_path": "auth.py",
+          "line_number": 11,
+          "severity": "Warning",
+          "category": "correctness",
+          "message": "check_hash is not imported in this file.",
+          "suggestion": "Add: from utils import check_hash"
+        }
+      ]
+    },
+    {
+      "job_id": "job-002",
+      "pr_number": "102",
+      "repo_url": "sample_repo",
+      "commit_sha": "b81c0d9e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c",
+      "status": "STATIC_FAILED",
+      "cache_hit": false,
+      "created_at": 1763870010.0,
+      "started_at": 1763870010.1,
+      "completed_at": 1763870010.2,
+      "latency_ms": 40,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "cost_usd": 0.0,
+      "diff_content": "--- a/config.py\n+++ b/config.py\n@@ -1,2 +1,3 @@\n+AWS_KEY = \"AKIAABCDEFGHIJKLMNOP\"\n DEBUG = True",
+      "gate_results": [
+        { "check_type": "secrets", "status": "FAIL", "details": "AWS key pattern at config.py:1", "duration_ms": 6 }
+      ],
+      "findings": []
+    },
+    {
+      "job_id": "job-003",
+      "pr_number": "103",
+      "repo_url": "sample_repo",
+      "commit_sha": "a3f9c2e81b7d4c05a1e2f3b4c5d6e7f801234567",
+      "status": "COMPLETED",
+      "cache_hit": true,
+      "created_at": 1763870020.0,
+      "started_at": 1763870020.0,
+      "completed_at": 1763870020.05,
+      "latency_ms": 50,
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "cost_usd": 0.0,
+      "diff_content": "--- a/auth.py\n+++ b/auth.py\n@@ -10,4 +10,4 @@\n def login(user, password):\n-    if password == \"admin123\":\n+    if check_hash(password, user.hash):\n         return True",
+      "gate_results": [],
+      "findings": [
+        {
+          "finding_id": "f-001",
+          "file_path": "auth.py",
+          "line_number": 11,
+          "severity": "Warning",
+          "category": "correctness",
+          "message": "check_hash is not imported in this file.",
+          "suggestion": "Add: from utils import check_hash"
+        }
+      ]
+    },
+    {
+      "job_id": "job-004",
+      "pr_number": "104",
+      "repo_url": "sample_repo",
+      "commit_sha": "c92d1e0f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d",
+      "status": "AI_REVIEWING",
+      "cache_hit": false,
+      "created_at": 1763870030.0,
+      "started_at": 1763870031.0,
+      "completed_at": null,
+      "latency_ms": null,
+      "tokens_in": null,
+      "tokens_out": null,
+      "cost_usd": null,
+      "diff_content": "--- a/database.py\n+++ b/database.py\n@@ -5,3 +5,4 @@\n def get_user(uid):\n+    print(uid)\n     return db.query(uid)",
+      "gate_results": [
+        { "check_type": "secrets", "status": "PASS", "details": "", "duration_ms": 3 },
+        { "check_type": "syntax", "status": "PASS", "details": "", "duration_ms": 8 }
+      ],
+      "findings": []
+    },
+    {
+      "job_id": "job-005",
+      "pr_number": "104",
+      "repo_url": "sample_repo",
+      "commit_sha": "d03e2f1a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e",
+      "status": "QUEUED",
+      "cache_hit": false,
+      "created_at": 1763870035.0,
+      "started_at": null,
+      "completed_at": null,
+      "latency_ms": null,
+      "tokens_in": null,
+      "tokens_out": null,
+      "cost_usd": null,
+      "diff_content": "--- a/utils.py\n+++ b/utils.py\n@@ -1,2 +1,3 @@\n+import hashlib\n def helper():",
+      "gate_results": [],
+      "findings": []
+    },
+    {
+      "job_id": "job-006",
+      "pr_number": "105",
+      "repo_url": "sample_repo",
+      "commit_sha": "e14f3a2b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f",
+      "status": "SUPERSEDED",
+      "cache_hit": false,
+      "created_at": 1763870025.0,
+      "started_at": 1763870026.0,
+      "completed_at": 1763870033.0,
+      "latency_ms": null,
+      "tokens_in": null,
+      "tokens_out": null,
+      "cost_usd": null,
+      "diff_content": "--- a/app.py\n+++ b/app.py\n@@ -1,2 +1,2 @@\n-VERSION = 1\n+VERSION = 2",
+      "gate_results": [],
+      "findings": []
+    }
+  ]
+}
