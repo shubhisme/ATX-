@@ -1,0 +1,92 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    ASYNC QUEUE - QUICK START                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+WHAT IS IT?
+-----------
+3 async workers process PR jobs in parallel using Python's asyncio.Queue.
+Jobs are distributed automatically. Non-blocking submission.
+
+
+HOW TO TEST (3 Terminals)
+--------------------------
+
+Terminal 1: python start.py
+Terminal 2: python monitor_queue.py  
+Terminal 3: python demo_parallel.py
+
+
+WHAT YOU'LL SEE
+---------------
+
+Backend (Terminal 1):
+  🟢 Worker 0 started and waiting for jobs
+  🟢 Worker 1 started and waiting for jobs
+  🟢 Worker 2 started and waiting for jobs
+  ✨ PR #1 submitted as job 1 | Queue: 0 | Busy workers: 0/3
+  🔴 [Worker 0] Picked up job 1 (Queue size: 0)
+  [Worker 0] Processing job 1 (PR #1)
+  🟢 [Worker 0] Completed job 1, back to idle
+
+Monitor (Terminal 2):
+  Time      | Queue    | Workers           | Worker Details
+  12:34:56  | 3 jobs ⏳ | 3 busy / 0 idle   | W0:Job1 | W1:Job2 | W2:Job3
+
+Demo (Terminal 3):
+  ✅ Submitted 10 PRs in 0.123 seconds
+  Job IDs created:
+    • Job 1: QUEUED
+    • Job 2: QUEUED
+    ...
+
+
+KEY CONCEPTS
+------------
+
+asyncio.Queue()          → Unbounded FIFO queue
+await queue.get()        → Worker waits for job (non-blocking)
+await queue.put(job_id)  → Add job to queue (instant)
+queue.task_done()        → Mark job complete
+
+3 Workers = 3 jobs processing at the same time
+
+
+FILES
+-----
+
+main.py                   → Queue implementation (already there!)
+demo_parallel.py          → Simple demo (10 PRs)
+monitor_queue.py          → Real-time monitor
+test_parallel_queue.py    → Full test suite
+PARALLEL_QUEUE_USAGE.txt  → Complete docs
+
+
+API
+---
+
+GET http://localhost:8000/status
+
+{
+  "queue_size": 5,
+  "busy_workers": 2,
+  "idle_workers": 1,
+  "workers": [...]
+}
+
+
+CONFIGURATION
+-------------
+
+config.py:  NUM_WORKERS = 3
+.env:       NUM_WORKERS=5
+CLI:        NUM_WORKERS=10 python start.py
+
+
+THAT'S IT!
+----------
+
+The queue is already implemented and working.
+Just add API keys and test it.
+
+🚀 Ready to process PRs in parallel!

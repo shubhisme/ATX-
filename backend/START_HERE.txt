@@ -1,0 +1,90 @@
+ISSUE FIXED: Dependencies now installed
+========================================
+
+The error "ModuleNotFoundError: No module named 'aiosqlite'" is now resolved.
+
+All required packages are installed:
+✅ fastapi
+✅ uvicorn
+✅ aiosqlite
+✅ groq
+✅ websockets
+✅ python-dotenv
+✅ pytest
+✅ httpx
+
+
+HOW TO START
+============
+
+1. Start the backend:
+   python run.py
+
+   OR
+
+   python start.py
+
+
+2. In another terminal, monitor workers (optional):
+   python monitor_queue.py
+
+
+3. In another terminal, test it:
+   python demo_parallel.py
+
+
+WHAT YOU'LL SEE
+===============
+
+Backend will show:
+   🚀 Starting PR Verification Engine...
+   🟢 Worker 0 started and waiting for jobs
+   🟢 Worker 1 started and waiting for jobs
+   🟢 Worker 2 started and waiting for jobs
+   ✅ Started 3 async workers
+
+
+When you submit PRs:
+   ✨ PR #1 submitted as job 1 | Queue: 0 | Busy workers: 0/3
+   🔴 [Worker 0] Picked up job 1 (Queue size: 0)
+   [Worker 0] Processing job 1 (PR #1)
+   🟢 [Worker 0] Completed job 1, back to idle
+
+
+TESTING
+=======
+
+python demo_parallel.py          → Simple 10 PR demo
+python test_parallel_queue.py    → Comprehensive tests
+python simulator.py batch 20     → Batch submission
+
+
+API
+===
+
+http://localhost:8000            → Health check
+http://localhost:8000/docs       → API documentation
+http://localhost:8000/status     → System status
+
+
+TROUBLESHOOTING
+===============
+
+If you get "module not found":
+   pip install -r requirements.txt
+
+If port 8000 is busy:
+   Edit .env: API_PORT=8001
+
+
+THE QUEUE SYSTEM
+================
+
+✅ 3 async workers process jobs in parallel
+✅ asyncio.Queue manages job distribution
+✅ Non-blocking submission (returns immediately)
+✅ Workers auto-pick jobs from queue
+✅ Real-time status monitoring
+
+
+READY TO RUN! 🚀
