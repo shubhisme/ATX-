@@ -1,19 +1,54 @@
 import type { JobStatus } from "@/lib/api";
 
-const STYLES: Record<JobStatus, string> = {
-    QUEUED: "bg-gray-100 text-gray-700 border-gray-300",
-    AI_REVIEWING: "bg-blue-100 text-blue-700 border-blue-300",
-    COMPLETED: "bg-green-100 text-green-700 border-green-300",
-    STATIC_FAILED: "bg-red-100 text-red-700 border-red-300",
-    SUPERSEDED: "bg-yellow-100 text-yellow-700 border-yellow-300",
+const CONFIG: Record<
+  JobStatus,
+  { label: string; badge: string; dot: string; pulse?: boolean }
+> = {
+  QUEUED: {
+    label: "QUEUED",
+    badge: "bg-slate-800 text-slate-300 border-slate-700",
+    dot: "bg-slate-400",
+  },
+  AI_REVIEWING: {
+    label: "AI REVIEWING",
+    badge: "bg-sky-500/10 text-sky-400 border-sky-500/30",
+    dot: "bg-sky-400",
+    pulse: true,
+  },
+  COMPLETED: {
+    label: "COMPLETED",
+    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+    dot: "bg-emerald-400",
+  },
+  STATIC_FAILED: {
+    label: "STATIC FAILED",
+    badge: "bg-rose-500/10 text-rose-400 border-rose-500/30",
+    dot: "bg-rose-400",
+  },
+  SUPERSEDED: {
+    label: "SUPERSEDED",
+    badge: "bg-amber-500/10 text-amber-400 border-amber-500/30 opacity-70",
+    dot: "bg-amber-400",
+  },
 };
 
 export default function StatusBadge({ status }: { status: JobStatus }) {
-    return (
-        <span
-        className={`inline-block rounded border px-2 py-0.5 text-xs font-medium ${STYLES[status]}`}
-        >
-        {status}
-        </span>
-    );
+  const conf = CONFIG[status] || {
+    label: status,
+    badge: "bg-slate-800 text-slate-300 border-slate-700",
+    dot: "bg-slate-400",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold tracking-wide ${conf.badge}`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${conf.dot} ${
+          conf.pulse ? "animate-ping" : ""
+        }`}
+      />
+      {conf.label}
+    </span>
+  );
 }
