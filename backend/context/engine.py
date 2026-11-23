@@ -48,7 +48,7 @@ def gather_context(
         # Diff alone exceeds budget
         return ContextResult(
             snippets=[],
-            total_tokens=diff_tokens,
+            total_tokens=min(diff_tokens, token_budget),
             files_included=[]
         )
     
@@ -57,8 +57,16 @@ def gather_context(
         if not filepath.endswith('.py'):
             continue
             
-        full_path = os.path.join(repo_path, filepath)
-        if not os.path.exists(full_path):
+        # Try multiple candidate paths for robustness
+        candidates = [
+            os.path.join(repo_path, filepath),
+            os.path.join(repo_path, os.path.basename(filepath)),
+            filepath,
+            os.path.join(os.path.dirname(__file__), "..", repo_path, os.path.basename(filepath)),
+            os.path.join(os.path.dirname(__file__), "..", "..", repo_path, os.path.basename(filepath)),
+        ]
+        full_path = next((c for c in candidates if os.path.exists(c)), None)
+        if not full_path:
             continue
         
         try:

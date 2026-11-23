@@ -334,13 +334,21 @@ export async function getJob(id: string): Promise<Job | null> {
   return fromSeed ? normalizeJob(fromSeed) : null;
 }
 
+function extractDiffFiles(diff: string): string[] {
+  const matches = Array.from(diff.matchAll(/^\+\+\+ (?:b\/)?(.+)$/gm));
+  if (matches.length > 0) {
+    return matches.map((m) => m[1].trim());
+  }
+  return ["utils.py"];
+}
+
 export async function submitPR(p: SubmitPayload): Promise<void> {
   // Always update local simulation
   submitMock(p);
 
   // If live backend is available, also submit to it
   try {
-    const files = p.files || ["sample_repo/utils.py"];
+    const files = p.files && p.files.length > 0 ? p.files : extractDiffFiles(p.diff_content);
     await fetch(`${API_BASE}/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -351,7 +359,7 @@ export async function submitPR(p: SubmitPayload): Promise<void> {
         diff: p.diff_content,
         files: files,
       }),
-      signal: AbortSignal.timeout(2000),
+      signal: AbortSignal.timeout(3000),
     });
   } catch {
     // Handled in mock state

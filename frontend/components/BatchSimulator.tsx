@@ -50,7 +50,7 @@ export default function BatchSimulator() {
         commit_sha: sha,
         diff_content: sample.diff,
         title: `PR #${prCounter.current}: ${sample.label}`,
-        files: ["sample_repo/utils.py"],
+        files: sample.files || ["utils.py"],
       };
     });
 

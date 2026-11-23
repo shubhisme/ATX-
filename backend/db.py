@@ -56,7 +56,138 @@ async def init_db():
         await db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_pr ON jobs(pr_number)")
         await db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
         
+        # Check if database is empty; if so, populate initial realistic demo jobs
+        cursor = await db.execute("SELECT COUNT(*) FROM jobs")
+        count = (await cursor.fetchone())[0]
+        if count == 0:
+            await _seed_demo_data(db)
+            
         await db.commit()
+
+
+async def _seed_demo_data(db: aiosqlite.Connection):
+    """Seed initial prototype demo data for rich instant out-of-the-box demonstration."""
+    now = datetime.utcnow().isoformat() + "Z"
+    
+    # 1. SQL Injection job
+    sql_findings = {
+        "summary": "Security vulnerability detected: Potential SQL Injection.",
+        "findings": [{
+            "severity": "critical",
+            "file": "database.py",
+            "line": 5,
+            "message": "Direct f-string interpolation into SQL statement introduces SQL Injection vulnerability (CWE-89).",
+            "suggestion": "Use parameterized queries: return db.query('SELECT * FROM users WHERE id = ?', (uid,))"
+        }]
+    }
+    await db.execute("""
+        INSERT INTO jobs (
+            pr_number, title, commit_sha, diff, status, files, static_result, review,
+            prompt_tokens, completion_tokens, cost_usd, queued_at, started_at, completed_at, latency_ms, cache_hit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        101, "PR #101: SQL Injection Flaw", "a3f9c2e81b7d4c05a1e2f3b4c5d6e7f801234567",
+        "--- a/database.py\n+++ b/database.py\n@@ -4,3 +4,3 @@\n def get_user(uid):\n-    return db.query(\"SELECT * FROM users WHERE id = ?\", uid)\n+    return db.query(f\"SELECT * FROM users WHERE id = {uid}\")",
+        PRStatus.COMPLETED.value, json.dumps(["database.py"]),
+        json.dumps({"passed": True, "errors": [], "warnings": []}),
+        json.dumps(sql_findings),
+        2140, 385, 0.001566, now, now, now, 2600, 0
+    ))
+
+    # 2. Secret leak static failure
+    await db.execute("""
+        INSERT INTO jobs (
+            pr_number, title, commit_sha, diff, status, files, static_result, review,
+            prompt_tokens, completion_tokens, cost_usd, queued_at, started_at, completed_at, latency_ms, cache_hit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        102, "PR #102: Hardcoded AWS Key Leak", "b81c0d9e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c",
+        "--- a/config.py\n+++ b/config.py\n@@ -1,2 +1,3 @@\n+AWS_KEY = \"AKIAIOSFODNN7EXAMPLE\"\n DEBUG = True",
+        PRStatus.STATIC_FAILED.value, json.dumps(["config.py"]),
+        json.dumps({"passed": False, "errors": ["Hardcoded AWS Access Key pattern matched at config.py:1"], "warnings": []}),
+        None,
+        0, 0, 0.0, now, now, now, 10, 0
+    ))
+
+    # 3. Cache hit job
+    await db.execute("""
+        INSERT INTO jobs (
+            pr_number, title, commit_sha, diff, status, files, static_result, review,
+            prompt_tokens, completion_tokens, cost_usd, queued_at, started_at, completed_at, latency_ms, cache_hit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        103, "PR #103: Deduplication Cache Test", "a3f9c2e81b7d4c05a1e2f3b4c5d6e7f801234567",
+        "--- a/database.py\n+++ b/database.py\n@@ -4,3 +4,3 @@\n def get_user(uid):\n-    return db.query(\"SELECT * FROM users WHERE id = ?\", uid)\n+    return db.query(f\"SELECT * FROM users WHERE id = {uid}\")",
+        PRStatus.COMPLETED.value, json.dumps(["database.py"]),
+        json.dumps({"passed": True, "errors": [], "warnings": []}),
+        json.dumps(sql_findings),
+        0, 0, 0.0, now, now, now, 12, 1
+    ))
+
+    # 4. Missing import job
+    import_findings = {
+        "summary": "Import error identified in auth routine.",
+        "findings": [{
+            "severity": "warning",
+            "file": "auth.py",
+            "line": 11,
+            "message": "Symbol 'check_hash' is invoked without being imported in this file.",
+            "suggestion": "Add top-level import: from utils import check_hash"
+        }]
+    }
+    await db.execute("""
+        INSERT INTO jobs (
+            pr_number, title, commit_sha, diff, status, files, static_result, review,
+            prompt_tokens, completion_tokens, cost_usd, queued_at, started_at, completed_at, latency_ms, cache_hit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        104, "PR #104: Missing Import & Unsalted Hash", "c92d1e0f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d",
+        "--- a/auth.py\n+++ b/auth.py\n@@ -10,4 +10,4 @@\n def login(user, password):\n-    if password == \"admin123\":\n+    if check_hash(password, user.hash):\n         return True",
+        PRStatus.COMPLETED.value, json.dumps(["auth.py"]),
+        json.dumps({"passed": True, "errors": [], "warnings": []}),
+        json.dumps(import_findings),
+        1920, 310, 0.001377, now, now, now, 2600, 0
+    ))
+
+    # 5. Clean docstring job
+    await db.execute("""
+        INSERT INTO jobs (
+            pr_number, title, commit_sha, diff, status, files, static_result, review,
+            prompt_tokens, completion_tokens, cost_usd, queued_at, started_at, completed_at, latency_ms, cache_hit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        105, "PR #105: Clean change (Docstring)", "d03e2f1a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e",
+        "--- a/utils.py\n+++ b/utils.py\n@@ -1,3 +1,4 @@\n def helper(x):\n+    \"\"\"Return x doubled.\"\"\"\n     return x * 2",
+        PRStatus.COMPLETED.value, json.dumps(["utils.py"]),
+        json.dumps({"passed": True, "errors": [], "warnings": []}),
+        json.dumps({"summary": "Clean modification. No defects found.", "findings": []}),
+        1280, 190, 0.000905, now, now, now, 2100, 0
+    ))
+
+    # 6. Superseded job
+    await db.execute("""
+        INSERT INTO jobs (
+            pr_number, title, commit_sha, diff, status, files, static_result, review,
+            prompt_tokens, completion_tokens, cost_usd, queued_at, started_at, completed_at, latency_ms, cache_hit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        106, "PR #106: Superseded Version Bump", "e14f3a2b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f",
+        "--- a/app.py\n+++ b/app.py\n@@ -1,2 +1,2 @@\n-VERSION = 1\n+VERSION = 2",
+        PRStatus.SUPERSEDED.value, json.dumps(["app.py"]),
+        None, None,
+        0, 0, 0.0, now, now, now, 800, 0
+    ))
+
+    # Commit cache entry
+    await db.execute("""
+        INSERT OR REPLACE INTO commit_cache (
+            commit_sha, review, prompt_tokens, completion_tokens, cost_usd, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        "a3f9c2e81b7d4c05a1e2f3b4c5d6e7f801234567",
+        json.dumps(sql_findings),
+        2140, 385, 0.001566, now
+    ))
 
 
 async def insert_job(job: PRJobInsert) -> int:

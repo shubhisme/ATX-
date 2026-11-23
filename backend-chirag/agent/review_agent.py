@@ -135,7 +135,7 @@ async def review_pr(
         logger.error("GROQ_API_KEY is not set in the environment")
         return _error_result("GROQ_API_KEY environment variable is not set.")
 
-    model = os.environ.get("GROQ_MODEL", "compound-beta")
+    model = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
     tracker = TokenTracker(model_name=model)
 
     user_message = USER_PROMPT_TEMPLATE.format(

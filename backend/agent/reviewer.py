@@ -29,9 +29,10 @@ class ReviewResult:
     cost_usd: float
 
 
-# Groq pricing (as of latest known rates)
-# llama-3.3-70b-versatile: $0.59/1M input, $0.79/1M output
-MODEL_NAME = "llama-3.3-70b-versatile"
+import os
+
+# Groq model and pricing
+MODEL_NAME = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 COST_PER_MILLION_INPUT = 0.59
 COST_PER_MILLION_OUTPUT = 0.79
 
@@ -166,21 +167,32 @@ def build_review_prompt(diff: str, context_snippets: list[str], title: str) -> s
 
 
 def extract_json(content: str) -> dict:
-    """Extract JSON from LLM response (handles markdown code blocks)."""
-    # Remove markdown code blocks if present
-    content = content.strip()
-    
-    if content.startswith("```json"):
-        content = content[7:]
-    elif content.startswith("```"):
-        content = content[3:]
-    
-    if content.endswith("```"):
-        content = content[:-3]
-    
-    content = content.strip()
-    
-    return json.loads(content)
+    """Extract JSON from LLM response (handles markdown code blocks and wrappers)."""
+    import re
+    cleaned = content.strip()
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+
+    # Match ```json ... ``` or ``` ... ```
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except Exception:
+            pass
+
+    # Extract outermost { ... }
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        try:
+            return json.loads(cleaned[start:end+1])
+        except Exception:
+            pass
+
+    raise ValueError("Could not extract valid JSON from response")
 
 
 def calculate_cost(prompt_tokens: int, completion_tokens: int) -> float:

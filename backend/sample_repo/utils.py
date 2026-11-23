@@ -1,44 +1,63 @@
-﻿"""
-Utility helpers used across the sample application.
-No local imports — standalone module.
+"""General-purpose utility functions.
+
+This module has no internal project imports and serves as the
+lowest-level dependency in the sample repository.
 """
-import uuid
+
 import re
+import uuid
 from datetime import datetime, timezone
-
-
-def generate_uuid() -> str:
-    """Generate a new random UUID4 string."""
-    return str(uuid.uuid4())
-
-
-def utcnow_iso() -> str:
-    """Return the current UTC time as an ISO-8601 string with Z suffix."""
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+from typing import Any
 
 
 def sanitize_input(text: str) -> str:
-    """Strip leading/trailing whitespace and remove control characters."""
-    text = text.strip()
-    text = re.sub(r"[\x00-\x1f\x7f]", "", text)
-    return text
+    """Strip dangerous characters and collapse whitespace.
+
+    Args:
+        text: Raw user-supplied string.
+
+    Returns:
+        A sanitized copy of the string safe for further processing.
+    """
+    cleaned = re.sub(r"[<>&\"']", "", text)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
 
 
-def format_currency(amount: float, currency: str = "USD") -> str:
-    """Format a float amount as a currency string, e.g. '$12.50'."""
-    symbols = {"USD": "$", "EUR": "€", "GBP": "£"}
-    symbol = symbols.get(currency.upper(), currency + " ")
-    return f"{symbol}{amount:,.2f}"
+def format_response(data: Any, status: int = 200) -> dict[str, Any]:
+    """Wrap *data* in a standard API response envelope.
+
+    Args:
+        data: Payload to include in the response body.
+        status: HTTP-style status code.
+
+    Returns:
+        A dictionary with ``status``, ``data``, and ``timestamp`` keys.
+    """
+    return {
+        "status": status,
+        "data": data,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def validate_email(email: str) -> bool:
-    """Return True if the string looks like a valid email address."""
-    pattern = r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+    """Check whether *email* looks like a valid e-mail address.
+
+    Args:
+        email: The address to validate.
+
+    Returns:
+        ``True`` when the address matches a basic e-mail pattern.
+    """
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
     return bool(re.match(pattern, email))
 
 
-def truncate(text: str, max_len: int = 100) -> str:
-    """Truncate text to max_len characters, appending '...' if cut."""
-    if len(text) <= max_len:
-        return text
-    return text[: max_len - 3] + "..."
+def generate_id() -> str:
+    """Generate a unique identifier string.
+
+    Returns:
+        A UUID-4 hex string (32 characters, no dashes).
+    """
+    return uuid.uuid4().hex

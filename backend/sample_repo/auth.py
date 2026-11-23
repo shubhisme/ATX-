@@ -1,58 +1,80 @@
-﻿"""
-Authentication module for the sample application.
-Handles user sessions, token management, and password hashing.
+"""Authentication and session management helpers.
+
+Depends on :mod:`utils` for ID generation and input sanitization,
+and on :mod:`config` for the secret key and token expiry settings.
 """
+
 import hashlib
-import os
-from utils import generate_uuid, utcnow_iso, sanitize_input
+import hmac
+import time
+from typing import Any, Optional
 
-
-_sessions: dict[str, dict] = {}
-_revoked_tokens: set[str] = set()
+from .config import SECRET_KEY, TOKEN_EXPIRY_SECONDS
+from .utils import generate_id, sanitize_input
 
 
 def hash_password(password: str) -> str:
-    """Hash a plaintext password using SHA-256 with a random salt.
-    Returns a 'salt:hash' string safe to store in the database.
+    """Return a salted SHA-256 hex digest of *password*.
+
+    Args:
+        password: Plain-text password to hash.
+
+    Returns:
+        A hex-encoded hash string.
     """
-    salt = os.urandom(16).hex()
-    pw_hash = hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
-    return f"{salt}:{pw_hash}"
+    salted = f"{SECRET_KEY}:{password}"
+    return hashlib.sha256(salted.encode("utf-8")).hexdigest()
 
 
-def authenticate_user(username: str, password: str) -> dict | None:
-    """Validate username and password against the user store.
-    Returns a user dict on success, None on failure.
+def verify_token(token: str) -> dict[str, Any]:
+    """Validate *token* and return its decoded claims.
+
+    A token is formatted as ``<user_id>:<timestamp>:<signature>``.
+
+    Args:
+        token: The bearer token string.
+
+    Returns:
+        A dict with ``valid`` (bool), ``user_id`` (str | None),
+        and ``reason`` (str | None) keys.
     """
-    username = sanitize_input(username)
-    if not username or not password:
-        return None
-    return {
-        "user_id": generate_uuid(),
-        "username": username,
-        "role": "developer",
-        "authenticated_at": utcnow_iso(),
-    }
+    token = sanitize_input(token)
+    parts = token.split(":")
+    if len(parts) != 3:
+        return {"valid": False, "user_id": None, "reason": "malformed token"}
+
+    user_id, timestamp_str, signature = parts
+    try:
+        issued_at = float(timestamp_str)
+    except ValueError:
+        return {"valid": False, "user_id": None, "reason": "invalid timestamp"}
+
+    if time.time() - issued_at > TOKEN_EXPIRY_SECONDS:
+        return {"valid": False, "user_id": None, "reason": "token expired"}
+
+    expected = hmac.new(
+        SECRET_KEY.encode(), f"{user_id}:{timestamp_str}".encode(), hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(signature, expected):
+        return {"valid": False, "user_id": None, "reason": "bad signature"}
+
+    return {"valid": True, "user_id": user_id, "reason": None}
 
 
-def create_session(user_id: str) -> str:
-    """Create a new session token for the given user ID."""
-    token = generate_uuid()
-    _sessions[token] = {"user_id": user_id, "created_at": utcnow_iso()}
-    return token
+def create_session(user_id: str) -> dict[str, str]:
+    """Create a new authenticated session for *user_id*.
 
+    Args:
+        user_id: Identifier of the user to create a session for.
 
-def validate_token(token: str) -> dict | None:
-    """Check whether a session token is valid and not revoked."""
-    if token in _revoked_tokens:
-        return None
-    return _sessions.get(token)
-
-
-def revoke_token(token: str) -> bool:
-    """Invalidate a session token (logout)."""
-    if token in _sessions:
-        del _sessions[token]
-        _revoked_tokens.add(token)
-        return True
-    return False
+    Returns:
+        A dict containing ``session_id`` and ``token``.
+    """
+    session_id = generate_id()
+    timestamp = str(time.time())
+    signature = hmac.new(
+        SECRET_KEY.encode(), f"{user_id}:{timestamp}".encode(), hashlib.sha256
+    ).hexdigest()
+    token = f"{user_id}:{timestamp}:{signature}"
+    return {"session_id": session_id, "token": token}

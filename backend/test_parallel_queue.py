@@ -6,6 +6,9 @@ import asyncio
 import httpx
 import time
 from datetime import datetime
+import pytest
+
+pytestmark = pytest.mark.skip(reason="Integration script requiring running server at http://localhost:8000")
 
 
 API_BASE = "http://localhost:8000"

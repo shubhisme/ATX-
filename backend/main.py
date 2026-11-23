@@ -366,14 +366,25 @@ async def list_jobs(limit: int = 50):
         "jobs": [
             {
                 "id": job.id,
+                "job_id": f"job-{job.id:03d}",
                 "pr_number": job.pr_number,
                 "title": job.title,
                 "commit_sha": job.commit_sha,
                 "status": job.status.value,
                 "queued_at": job.queued_at,
+                "started_at": job.started_at,
                 "completed_at": job.completed_at,
                 "latency_ms": job.latency_ms,
                 "cache_hit": job.cache_hit,
+                "prompt_tokens": job.prompt_tokens,
+                "completion_tokens": job.completion_tokens,
+                "tokens_in": job.prompt_tokens,
+                "tokens_out": job.completion_tokens,
+                "cost_usd": job.cost_usd,
+                "diff": job.diff,
+                "diff_content": job.diff,
+                "static_result": job.static_result,
+                "review": job.review,
             }
             for job in jobs
         ],
@@ -382,25 +393,31 @@ async def list_jobs(limit: int = 50):
 
 
 @app.get("/jobs/{job_id}")
-async def get_job_detail(job_id: int):
-    """Get detailed information about a specific job."""
-    job = await db.get_job(job_id)
+async def get_job_detail(job_id: str):
+    """Get detailed information about a specific job (supports 1, '1', 'job-001')."""
+    raw_str = job_id.replace("job-", "").lstrip("0") or "0"
+    numeric_id = int(raw_str) if raw_str.isdigit() else None
+    job = await db.get_job(numeric_id) if numeric_id is not None else None
     
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
     return {
         "id": job.id,
+        "job_id": f"job-{job.id:03d}",
         "pr_number": job.pr_number,
         "title": job.title,
         "commit_sha": job.commit_sha,
         "status": job.status.value,
         "files": job.files,
         "diff": job.diff,
+        "diff_content": job.diff,
         "static_result": job.static_result,
         "review": job.review,
         "prompt_tokens": job.prompt_tokens,
         "completion_tokens": job.completion_tokens,
+        "tokens_in": job.prompt_tokens,
+        "tokens_out": job.completion_tokens,
         "cost_usd": job.cost_usd,
         "queued_at": job.queued_at,
         "started_at": job.started_at,
