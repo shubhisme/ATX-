@@ -39,8 +39,11 @@ export default function BatchSimulator() {
       if (isReuse) {
         sample = reuseSample;
         sha = reuseSha;
+      } else if (isLeak && (batchSize === 1 || i % 3 === 0)) {
+        sample = SECRET_SAMPLE;
+        sha = randomSha();
       } else {
-        sample = isLeak && i % 3 === 1 ? SECRET_SAMPLE : pick(CLEAN_SAMPLES);
+        sample = pick(CLEAN_SAMPLES);
         sha = randomSha();
       }
       prCounter.current += 1;
