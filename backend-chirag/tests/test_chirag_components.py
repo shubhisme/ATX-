@@ -18,7 +18,11 @@ sys.path.insert(0, BACKEND_DIR)
 from gates.secret_scanner import scan_secrets
 from gates.syntax_checker import check_syntax, check_syntax_from_diff
 from gates.gate_runner import run_static_gates
-from context.dependency_resolver import resolve_dependencies, get_imported_symbols
+from context.dependency_resolver import (
+    resolve_dependencies,
+    get_imported_symbols,
+    extract_files_from_diff,
+)
 from context.symbol_reader import read_symbol_context, extract_all_symbols, build_context_for_diff
 from agent.token_tracker import TokenTracker
 from agent.prompts import SYSTEM_PROMPT, USER_PROMPT_TEMPLATE
@@ -66,6 +70,35 @@ class TestDeterministicGates(unittest.TestCase):
         res_invalid = check_syntax("broken.py", invalid_code)
         self.assertFalse(res_invalid.valid)
         self.assertIsNotNone(res_invalid.error_message)
+
+    def test_extract_files_from_diff(self):
+        diff = (
+            "--- a/app.py\n"
+            "+++ b/app.py\n"
+            "@@ -1,2 +1,3 @@\n"
+            "+pass\n"
+            "--- a/auth.py\n"
+            "+++ b/auth.py\n"
+            "@@ -1,2 +1,3 @@\n"
+            "+pass\n"
+        )
+        files = extract_files_from_diff(diff)
+        self.assertEqual(files, ["app.py", "auth.py"])
+
+    def test_gate_runner_diff_only(self):
+        async def run():
+            diff_syntax_fail = (
+                "--- a/bad.py\n"
+                "+++ b/bad.py\n"
+                "@@ -1,2 +1,3 @@\n"
+                "+def broken(\n"
+            )
+            # Call without changed_files parameter
+            res = await run_static_gates(diff_syntax_fail)
+            self.assertFalse(res.passed)
+            self.assertIn("syntax_check", res.failed_checks)
+
+        asyncio.run(run())
 
     def test_gate_runner_orchestrator(self):
         async def run():

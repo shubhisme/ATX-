@@ -11,8 +11,10 @@ import logging
 import time
 from dataclasses import dataclass, field
 
+from typing import Optional
+
 from .secret_scanner import SecretFinding, scan_secrets
-from .syntax_checker import SyntaxResult, check_syntax
+from .syntax_checker import SyntaxResult, check_syntax, check_syntax_from_diff
 
 logger = logging.getLogger(__name__)
 
@@ -73,14 +75,15 @@ def _syntax_result_to_dict(r: SyntaxResult) -> dict:
 
 async def run_static_gates(
     diff_text: str,
-    changed_files: list[dict],
+    changed_files: Optional[list[dict]] = None,
 ) -> GateResult:
     """Run all deterministic gates against a PR diff.
 
     Args:
         diff_text: The full unified diff text of the PR.
-        changed_files: A list of dicts with keys ``"path"`` (``str``) and
-            ``"content"`` (``str``) for every changed file.
+        changed_files: Optional list of dicts with keys ``"path"`` (``str``)
+            and ``"content"`` (``str``). If omitted, changed Python files are
+            extracted directly from *diff_text*.
 
     Returns:
         A :class:`GateResult` summarising pass/fail and individual check
@@ -114,18 +117,26 @@ async def run_static_gates(
     syntax_details: list[dict] = []
     syntax_passed = True
 
-    for file_info in changed_files:
-        path: str = file_info.get("path", "")
-        content: str = file_info.get("content", "")
+    if changed_files:
+        for file_info in changed_files:
+            path: str = file_info.get("path", "")
+            content: str = file_info.get("content", "")
 
-        # Only check Python files
-        if not path.endswith(".py"):
-            continue
+            # Only check Python files
+            if not path.endswith(".py"):
+                continue
 
-        result: SyntaxResult = check_syntax(path, content)
-        syntax_details.append(_syntax_result_to_dict(result))
-        if not result.valid:
-            syntax_passed = False
+            result: SyntaxResult = check_syntax(path, content)
+            syntax_details.append(_syntax_result_to_dict(result))
+            if not result.valid:
+                syntax_passed = False
+    else:
+        # Fallback: extract added Python content directly from unified diff
+        diff_results = check_syntax_from_diff(diff_text)
+        for r in diff_results:
+            syntax_details.append(_syntax_result_to_dict(r))
+            if not r.valid:
+                syntax_passed = False
 
     syntax_duration = (time.perf_counter() - syntax_start) * 1000
 

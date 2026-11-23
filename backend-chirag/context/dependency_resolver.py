@@ -12,11 +12,35 @@ from __future__ import annotations
 import ast
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+_DIFF_FILE_HEADER = re.compile(r"^\+\+\+ b/(.+)$", re.MULTILINE)
+
+
+def extract_files_from_diff(diff_text: str) -> list[str]:
+    """Extract list of changed file paths from unified diff headers.
+
+    Args:
+        diff_text: Full unified diff string.
+
+    Returns:
+        List of file paths modified or added in the diff.
+    """
+    matches = _DIFF_FILE_HEADER.findall(diff_text)
+    # Deduplicate while preserving order
+    seen = set()
+    result = []
+    for m in matches:
+        cleaned = m.strip()
+        if cleaned not in seen and cleaned != "/dev/null":
+            seen.add(cleaned)
+            result.append(cleaned)
+    return result
 
 
 @dataclass
